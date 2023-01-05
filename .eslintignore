@@ -1,0 +1,13 @@
+# Dependencies
+node_modules
+
+# Serverless
+.serverless
+
+# Webpack
+.webpack
+
+# Output
+dist
+
+swagger-ui

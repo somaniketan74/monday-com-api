@@ -1,0 +1,7 @@
+offline:
+  REGION: "ap-south-1"
+  BUCKET_NAME: ''
+   
+dev: 
+  REGION: "ap-south-1"
+  BUCKET_NAME: monday-assignment

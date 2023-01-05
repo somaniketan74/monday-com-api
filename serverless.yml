@@ -1,0 +1,76 @@
+service: monday-api
+variablesResolutionMode: 20210326
+
+custom:
+  # Our stage is based on what is passed in when running serverless
+  # commands. Or falls back to what we have set in the provider section.
+  stage: ${opt:stage, 'offline'}
+  webpack:
+    webpackConfig: ./webpack.config.js
+    includeModules: true
+  serverless-offline:
+    httpPort: 4000
+    noPrependStageInUrl: true
+  
+provider:
+  name: aws
+  region: ${file(./env-config.yml):${opt:stage}.REGION}
+  runtime: nodejs14.x
+  memorySize: 512
+  lambdaHashingVersion: 20201221 # https://www.serverless.com/framework/docs/deprecations/#LAMBDA_HASHING_VERSION_V2
+  
+  environment:
+    MONGOURI: ${ssm:/${opt:stage, self:provider.stage, 'dev'}/mongo}
+    # MONGOURI: mongodb://localhost:27017/monday
+    REGION: ${file(./env-config.yml):${opt:stage}.REGION, ''}
+    BUCKET_NAME: ${file(./env-config.yml):${opt:stage}.BUCKET_NAME, ''}
+    ENV: ${opt:stage}
+  iam:
+    role: 
+      statements:
+        - Effect: Allow
+          Action: s3:ListBucket
+          Resource: "*"
+        
+        - Effect: Allow
+          Action: 
+            - s3:GetObject
+            - s3:PutObject
+            - s3:PutObjectAcl
+            - s3:GetBucketPolicy
+            - s3:PutBucketPolicy
+          Resource: 
+            - arn:aws:s3:::${file(./env-config.yml):${opt:stage}.BUCKET_NAME}/*
+
+        - Effect: Allow
+          Action: 
+            - cloudfront:updateDistribution
+          Resource: "*"
+
+functions:
+  app:
+    handler: src/index.handler
+    events:
+      - http:
+          path: /
+          method: ANY
+          cors:
+            origin: '*'
+      - http:
+          path: '/{proxy+}'
+          method: ANY
+          cors:
+            origin: '*'
+  health:
+    handler: src/health/index.handler
+    events:
+      - http:
+          path: health
+          method: get
+
+package:
+  individually: true
+
+plugins:
+  - serverless-webpack
+  - serverless-offline
